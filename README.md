@@ -45,3 +45,6 @@ Al ser una aplicación autosuficiente de un solo archivo, no requiere instalaci�
 1. **Clonar el repositorio:**
    ```bash
    git clone [https://github.com/tu-usuario/lexnova-foda-simulation.git](https://github.com/tu-usuario/lexnova-foda-simulation.git)
+
+   📄 Licencia
+Este proyecto está bajo la Licencia MIT. Consulta el archivo LICENSE para obtener más detalles.
