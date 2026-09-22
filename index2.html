@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LexNova · Simulación Estratégica FODA</title>
+<style>
+  :root {
+    --bg-page: #ffffff;
+    --bg-header: #102235;
+    --border-dark: #d6dee7;
+    --text-dark: #17212b;
+    --text-muted: #d5e0ea;
+    --paper: #ffffff;
+    --paper-alt: #ffffff;
+    --ink: #12171d;
+    --ink-soft: #263746;
+    --ink-faint: #435465;
+    --rule: #d5dee7;
+    --f-color: #0f6a4c;
+    --d-color: #a35a08;
+    --o-color: #17518f;
+    --a-color: #a81c3c;
+    --serif: "Charter", "Bitstream Charter", "Sitka Text", Cambria, Georgia, "Times New Roman", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", "JetBrains Mono", Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background-color: var(--bg-page); color: var(--text-dark);
+    font-family: var(--sans); font-size: 16px; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 1300px; margin: 0 auto; padding: 0 24px 96px; }
+  .top-panel { background-color: var(--bg-header); border-bottom: 1px solid var(--border-dark); }
+  .top-panel-inner {
+    max-width: 1300px; margin: 0 auto; padding: 18px 24px;
+    display: flex; flex-wrap: wrap; align-items: flex-end; gap: 28px; justify-content: space-between;
+  }
+  .brand h1 { font-family: var(--serif); font-size: 1.45rem; letter-spacing: 0.06em; color: #ffffff; font-weight: 700; }
+  .brand span { display: block; font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.14em; color: var(--text-muted); text-transform: uppercase; margin-top: 5px; }
+  .kpis { display: flex; gap: 1px; flex-wrap: wrap; flex: 1; justify-content: flex-end; background: var(--border-dark); border: 1px solid var(--border-dark); }
+  .kpi { background: #1b2128; padding: 12px 18px; min-width: 232px; flex: 1; max-width: 280px; }
+  .kpi-label { font-family: var(--mono); font-size: 0.63rem; letter-spacing: 0.11em; color: var(--text-muted); text-transform: uppercase; display: block; }
+  .kpi-val { font-family: var(--sans); font-size: 1.4rem; font-weight: 700; color: #ffffff; display: flex; align-items: baseline; gap: 10px; margin-top: 2px; }
+  .kpi-delta { font-size: 0.72rem; font-weight: 700; font-family: var(--mono); }
+  .delta-good { color: #4ec99a; }
+  .delta-bad { color: #e07a72; }
+  .kpi-desc { font-size: 0.7rem; color: var(--text-muted); line-height: 1.35; margin-top: 8px; }
+  .kpi-context { background: #1b2128; border: 1px solid #33485d; border-top: none; padding: 10px 18px; font-family: var(--mono); font-size: 0.68rem; color: #dbe6ef; letter-spacing: 0.02em; line-height: 1.45; width: 100%; }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 28px 0 14px; margin-bottom: 20px; border-bottom: 1px solid #d5dee7; flex-wrap: wrap; }
+  .progress { display: flex; list-style: none; gap: 18px; padding: 0; flex-wrap: wrap; }
+  .progress li { font-family: var(--mono); font-size: 0.68rem; text-transform: uppercase; color: #526273; display: flex; align-items: center; gap: 7px; }
+  .progress .step-num { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border: 1px solid currentColor; font-size: 0.65rem; }
+  .progress li.done { color: #4ec99a; }
+  .progress li.done .step-num { border-color: #4ec99a; }
+  .progress li.current { color: var(--ink); }
+  .progress li.current .step-num { background: var(--ink); color: #ffffff; border-color: var(--ink); }
+  @media(max-width: 720px) {
+    .progress li .step-label { display: none; }
+  }
+  .reset-btn, .ghost-btn { background: #ffffff; border: 1px solid #9aaabd; color: #17212b; font-family: var(--mono); font-size: 0.72rem; padding: 8px 15px; cursor: pointer; text-transform: uppercase; }
+  .reset-btn:hover, .ghost-btn:hover { border-color: #1f4f7a; background: #f5f9fc; }
+  .grid-layout { display: grid; grid-template-columns: 1fr; gap: 34px; }
+  @media(min-width: 1040px) { .grid-layout { grid-template-columns: 1.12fr 0.88fr; align-items: start; } }
+  .paper { background: var(--paper); color: var(--ink); padding: 40px; }
+  @media(max-width: 640px) { .paper { padding: 24px 20px; } }
+  .log-entry { border: 1px solid #d5dee7; border-left: 3px solid #6d8aa5; padding: 13px 20px; margin-bottom: 10px; background: #ffffff; color: #263746; font-size: 0.85rem; }
+  .log-entry strong { color: #17212b; }
+  .eyebrow { font-family: var(--mono); font-size: 0.7rem; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 14px; display: block; }
+  .chapter-title { font-family: var(--serif); font-size: 2.15rem; font-weight: 700; margin-bottom: 22px; color: var(--ink); }
+  @media(max-width: 640px) { .chapter-title { font-size: 1.7rem; } }
+  .quarter-epigraph { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-faint); display: block; margin-bottom: 10px; }
+  .quarter-quote { font-family: var(--serif); font-style: italic; font-size: 1.05rem; color: var(--ink-soft); border-left: 3px solid var(--rule); padding-left: 16px; margin-bottom: 24px; }
+  .prose p { font-family: var(--serif); font-size: 1.12rem; line-height: 1.68; margin-bottom: 18px; color: var(--ink-soft); }
+  .decisions { margin-top: 34px; border-top: 2px solid var(--ink); padding-top: 26px; }
+  .decision-prompt { font-family: var(--mono); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); margin-bottom: 18px; }
+  .option-btn { display: block; text-align: left; width: 100%; background: #ffffff; border: 1px solid var(--rule); border-left: 4px solid #c9d0d6; padding: 18px 20px; cursor: pointer; margin-bottom: 12px; font-family: inherit; }
+  .option-btn:hover { border-left-color: var(--ink); background: var(--paper-alt); }
+  .option-btn:focus-visible, .primary-btn:focus-visible, .reset-btn:focus-visible, .ghost-btn:focus-visible, .nav-btn:focus-visible, .quadrant:focus-visible, .modal-btn:focus-visible {
+    outline: 3px solid #2f6fd0; outline-offset: 2px;
+  }
+  .opt-text { font-size: 1.02rem; font-weight: 700; color: var(--ink); }
+  .opt-desc { font-family: var(--serif); font-size: 0.98rem; color: var(--ink-soft); }
+  .opt-cost { display: block; font-family: var(--mono); font-size: 0.72rem; color: #a35a08; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--rule); }
+  .opt-cost strong { color: #7a3f00; }
+  .opt-tradeoff { display: block; font-family: var(--mono); font-size: 0.72rem; margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--rule); overflow-wrap: anywhere; }
+  .opt-ben { color: #0f6a4c; }
+  .opt-rie { color: #a81c3c; margin-top: 4px; }
+  .opt-tradeoff strong { font-weight: 700; }
+  .primary-btn { background: var(--ink); color: #ffffff; border: none; padding: 14px 26px; font-weight: 700; cursor: pointer; width: 100%; font-family: inherit; font-size: 0.95rem; }
+  .primary-btn:hover { background: #2a313a; }
+  .secondary-btn { background: transparent; color: var(--ink); border: 1px solid var(--ink); margin-top: 10px; }
+  .secondary-btn:hover { background: var(--paper-alt); }
+  .nav-btn { background: var(--ink); color: #ffffff; border: none; padding: 16px 26px; font-weight: 700; cursor: pointer; width: 100%; font-family: var(--sans); font-size: 1rem; margin-top: 30px; letter-spacing: 0.02em; }
+  .nav-btn:hover { background: #2a313a; }
+  .back-link { background: transparent; border: none; color: var(--ink-faint); font-family: var(--mono); font-size: 0.78rem; cursor: pointer; padding: 0; margin-bottom: 24px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .back-link:hover { color: var(--ink); text-decoration: underline; }
+  .matrix-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+  .matrix-header h2 { font-family: var(--serif); font-size: 1.3rem; color: #ffffff; margin: 0; font-weight: 700; }
+  .matrix-header span { font-family: var(--mono); font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; }
+  .matrix-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #c9d0d6; border: 1px solid #c9d0d6; }
+  .quadrant { background: #ffffff; padding: 16px; min-height: 210px; color: var(--ink); }
+  .quadrant > div:last-child { max-height: 380px; overflow-y: auto; }
+  .q-F { border-top: 5px solid var(--f-color); }
+  .q-D { border-top: 5px solid var(--d-color); }
+  .q-O { border-top: 5px solid var(--o-color); }
+  .q-A { border-top: 5px solid var(--a-color); }
+  .q-head { display: flex; align-items: baseline; gap: 10px; border-bottom: 1px solid var(--rule); margin-bottom: 10px; padding-bottom: 8px; }
+  .q-head .letter { font-family: var(--serif); font-size: 1.5rem; font-weight: 700; }
+  .q-head .title { font-size: 0.85rem; font-weight: 700; flex: 1; }
+  .q-head .count { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-faint); }
+  .factor-group { margin-bottom: 12px; }
+  .factor-group-label { font-family: var(--mono); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); display: block; margin-bottom: 6px; border-bottom: 1px dashed var(--rule); padding-bottom: 3px; }
+  .factor-list { list-style: none; padding: 0; margin: 0; font-size: 0.85rem; }
+  .factor-list li { margin-bottom: 6px; line-height: 1.4; overflow-wrap: anywhere; }
+  .factor-list code { font-family: var(--mono); font-weight: 700; padding: 2px 5px; border: 1px solid currentColor; margin-right: 5px; font-size: 0.72rem; }
+  .factor-type { display: inline-block; font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 1px 5px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+  .ft-fin { background: #e8eef5; color: #2a4a70; }
+  .ft-com { background: #eaf3ec; color: #2a5a3a; }
+  .ft-tec { background: #efeaf6; color: #4a2a70; }
+  .ft-hum { background: #f6efe6; color: #6a4a20; }
+  .ft-ope { background: #f0f0f0; color: #4a4a4a; }
+  .verdict-head { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 26px; color: var(--ink); }
+  .balance-section { margin: 30px 0; }
+  .balance-row { display: grid; grid-template-columns: 108px 1fr 58px; align-items: center; gap: 14px; margin-bottom: 9px; color: var(--ink); }
+  .b-track { height: 14px; background: var(--paper-alt); border: 1px solid var(--rule); position: relative; }
+  .b-fill { height: 100%; position: absolute; left: 0; top: 0; }
+  .debrief-box { display: block; background: var(--paper-alt); border-left: 4px solid var(--ink); padding: 20px 24px; margin: 26px 0; }
+  .debrief-box h3 { font-family: var(--serif); font-size: 1.1rem; margin: 0 0 12px; color: var(--ink); }
+  .debrief-box ul { list-style: none; padding: 0; margin: 0; font-size: 0.92rem; color: var(--ink-soft); }
+  .debrief-box li { margin-bottom: 8px; }
+  .alt-archetype { font-family: var(--mono); font-size: 0.78rem; font-weight: 700; color: var(--ink); }
+  .strategy-note { font-family: var(--mono); font-size: 0.68rem; color: var(--ink-faint); display: block; margin-top: 3px; }
+  .reflection-q { margin: 18px 0; padding: 14px 16px; background: #ffffff; border: 1px solid var(--rule); border-radius: 4px; }
+  .reflection-q label { display: block; font-family: var(--serif); font-size: 1rem; color: var(--ink); margin-bottom: 6px; font-weight: 700; }
+  .reflection-q .reflection-hint { display: block; font-family: var(--mono); font-size: 0.68rem; color: var(--ink-faint); margin-bottom: 8px; }
+  .reflection-q textarea { width: 100%; border: 1px solid var(--rule); padding: 10px 12px; font-family: var(--sans); font-size: 0.9rem; color: var(--ink); background: #ffffff; resize: vertical; min-height: 90px; display: block; margin-top: 6px; }
+  .reflection-q textarea:focus-visible { outline: 3px solid #2f6fd0; outline-offset: 1px; }
+  .history-panel { margin-top: 34px; border-top: 1px solid #d5dee7; padding-top: 20px; }
+  .history-panel h3 { font-family: var(--serif); font-size: 1.1rem; color: #17212b; margin: 0 0 14px; }
+  .history-item { border: 1px solid #d5dee7; background: #ffffff; color: #263746; padding: 12px 16px; margin-bottom: 8px; font-size: 0.84rem; }
+  .history-item .h-head { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .history-item .h-date { font-family: var(--mono); font-size: 0.72rem; color: #526273; }
+  .history-item .h-arch { font-weight: 700; color: #17212b; }
+  .history-item .h-decisions { font-family: var(--mono); font-size: 0.72rem; color: #526273; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #d5dee7; overflow-wrap: anywhere; }
+  .history-empty { font-size: 0.85rem; color: #526273; font-style: italic; }
+  .opex-panel {
+    border: 1px solid #d5dee7;
+    background: #ffffff;
+    color: #263746;
+    padding: 14px 18px;
+    margin-bottom: 18px;
+  }
+  .opex-panel h4 {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #17212b;
+    margin: 0 0 10px;
+  }
+  .opex-panel .opex-intro {
+    font-size: 0.82rem;
+    color: #435465;
+    line-height: 1.5;
+    margin: 0 0 8px;
+  }
+  /* FIX: nota de contexto pedagógica, una línea, sin sobrecarga */
+  .opex-panel .opex-contexto {
+    font-size: 0.78rem;
+    color: #526273;
+    line-height: 1.5;
+    margin: 0 0 14px;
+    font-style: italic;
+  }
+  .opex-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: #263746;
+    padding: 6px 0;
+    border-bottom: 1px dashed #d5dee7;
+  }
+  .opex-item:last-child { border-bottom: none; }
+  .opex-item span:last-child {
+    font-family: var(--mono);
+    color: #a81c3c;
+    font-weight: 700;
+  }
+  .opex-total {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.88rem;
+    padding-top: 8px;
+    margin-top: 4px;
+    border-top: 1px solid #d5dee7;
+    font-weight: 700;
+    color: #17212b;
+  }
+  .opex-total span:last-child {
+    font-family: var(--mono);
+    color: #a81c3c;
+  }
+  .opex-total-global {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.92rem;
+    padding-top: 12px;
+    margin-top: 10px;
+    border-top: 2px solid #17212b;
+    font-weight: 700;
+    color: #17212b;
+    letter-spacing: 0.02em;
+  }
+  .opex-total-global span:last-child {
+    font-family: var(--mono);
+    color: #a81c3c;
+    font-size: 1rem;
+  }
+  .crisis-box { border: 2px solid #a81c3c; background: #fdf5f6; padding: 20px 24px; margin: 26px 0; color: var(--ink); }
+  .crisis-box h3 { font-family: var(--serif); font-size: 1.15rem; margin: 0 0 12px; color: #a81c3c; }
+  .crisis-box p { font-family: var(--serif); font-size: 1rem; color: var(--ink-soft); margin-bottom: 12px; }
+  .tone-exito { border-left-color: #2f8f5b; }
+  .tone-dificultad { border-left-color: #b8342f; }
+  .tone-intermedio { border-left-color: #a35a08; }
+  .close-note { background: #ffffff; border-left: 3px solid var(--ink); padding: 14px 18px; margin: 32px 0 20px; font-family: var(--serif); font-size: 0.95rem; color: var(--ink-soft); clear: both; }
+  .close-note strong { color: var(--ink); }
+  .cash-chart { margin: 30px 0; padding: 20px 24px; background: var(--paper-alt); border: 1px solid var(--rule); }
+  .cash-chart .eyebrow { font-family: var(--mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-faint); margin-bottom: 12px; display: block; }
+  .cash-chart svg { width: 100%; height: auto; display: block; }
+  .icd-line { font-family: var(--mono); font-size: 0.92rem; color: var(--ink); padding: 12px 0; border-bottom: 1px solid var(--rule); margin-bottom: 26px; letter-spacing: 0.02em; }
+  .icd-line .icd-num { font-weight: 700; }
+  .icd-line .icd-sep { color: var(--ink-faint); margin: 0 8px; }
+  .icd-line .icd-crisis { color: #a81c3c; }
+  .cf-block { margin: 8px 0 16px; padding-left: 14px; border-left: 2px solid var(--rule); }
+  .cf-block p { margin: 4px 0; font-family: var(--serif); font-size: 0.95rem; color: var(--ink-soft); overflow-wrap: anywhere; }
+  .cf-block .cf-label { font-family: var(--mono); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(16, 20, 24, 0.75); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+  .modal-box { background: var(--paper); color: var(--ink); max-width: 440px; width: 100%; padding: 28px; border-radius: 6px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); }
+  .modal-box h3 { font-family: var(--serif); font-size: 1.25rem; margin: 0 0 12px; color: var(--ink); }
+  .modal-box p { font-family: var(--serif); font-size: 1rem; color: var(--ink-soft); margin: 0 0 20px; line-height: 1.55; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+  .modal-btn { font-family: var(--sans); font-size: 0.95rem; font-weight: 700; padding: 12px 22px; border: none; cursor: pointer; border-radius: 4px; }
+  .modal-btn.primary { background: var(--ink); color: #ffffff; }
+  .modal-btn.primary:hover { background: #2a313a; }
+  .modal-btn.secondary { background: transparent; color: var(--ink); border: 1px solid var(--ink); }
+  .modal-btn.secondary:hover { background: var(--paper-alt); }
+  .prose .kpi-context {
+    background: #ffffff;
+    border: 1px solid #cbd7e2;
+    border-left: 4px solid #2f6fd0;
+    color: #17212b;
+    font-family: var(--sans);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    letter-spacing: 0;
+    padding: 16px 18px;
+    margin: 24px 0 0;
+  }
+  .welcome-screen h3 { color: #17212b; margin-top: 28px; margin-bottom: 8px; }
+  .welcome-screen .prose p, .welcome-screen .prose li { color: #263746; }
+  .welcome-screen .prose ul { padding-left: 1.2rem; }
+  .welcome-screen .primary-btn { max-width: 420px; margin-top: 10px; }
+  .matrix-header h2 { color: #17212b; }
+  .matrix-header span { color: #526273; }
+  .history-item .h-decisions { border-top-color: #d5dee7; }
+</style>
+</head>
+<body>
+<header class="top-panel"><div class="top-panel-inner"><div class="brand"><h1>LexNova</h1></div><div class="kpis" id="kpi-container"></div></div></header>
+<div class="container">
+  <div class="toolbar">
+    <ol class="progress" id="progress-bar"></ol>
+    <div style="display:flex;gap:10px">
+      <button class="ghost-btn" id="btn-history">Ver historial</button>
+      <button class="reset-btn" id="btn-reset">Reiniciar año</button>
+    </div>
+  </div>
+  <main class="grid-layout">
+    <section class="col-narrative">
+      <div id="opex-container"></div>
+      <ul class="log-entries" id="log-container" style="list-style:none;padding:0;margin:0 0 18px"></ul>
+      <div class="paper" id="stage-container"></div>
+      <div id="history-container"></div>
+    </section>
+    <section class="col-matrix">
+      <div class="matrix-header"><h2>Matriz FODA acumulada</h2><span id="matrix-tally">0 factores</span></div>
+      <div class="matrix-grid">
+        <div class="quadrant q-F" tabindex="0" role="region" aria-label="Cuadrante Fortalezas (desplazable)"><div class="q-head"><span class="letter">F</span><span class="title">Fortalezas</span><span class="count" id="count-F">0</span></div><div id="list-F"></div></div>
+        <div class="quadrant q-D" tabindex="0" role="region" aria-label="Cuadrante Debilidades (desplazable)"><div class="q-head"><span class="letter">D</span><span class="title">Debilidades</span><span class="count" id="count-D">0</span></div><div id="list-D"></div></div>
+        <div class="quadrant q-O" tabindex="0" role="region" aria-label="Cuadrante Oportunidades (desplazable)"><div class="q-head"><span class="letter">O</span><span class="title">Oportunidades</span><span class="count" id="count-O">0</span></div><div id="list-O"></div></div>
+        <div class="quadrant q-A" tabindex="0" role="region" aria-label="Cuadrante Amenazas (desplazable)"><div class="q-head"><span class="letter">A</span><span class="title">Amenazas</span><span class="count" id="count-A">0</span></div><div id="list-A"></div></div>
+      </div>
+    </section>
+  </main>
+</div>
+<script>
+(function(){
+  const INIT_KPIS = { margen: 22, caja: 300000, concentracion: 30 };
+  const TOTAL_QUARTERS = 4;
+
+  const KPI_DEFS = [
+    { id:'margen', l:'Margen operativo', d:'Ganancia por sol facturado.', unit:'%', goodWhenUp:true },
+    { id:'caja', l:'Caja (USD)', d:'Flujo de caja disponible.', unit:'usd', goodWhenUp:true },
+    { id:'concentracion', l:'Riesgo concentración', d:'Dependencia de clientes clave.', unit:'%', goodWhenUp:false }
+  ];
+
+  const BASE_FACTORS = [
+    {q:"F", w:2, t:"com", text:"Marca del estudio con 28 años de trayectoria en Lima."},
+    {q:"D", w:2, t:"fin", text:"78% de ingresos provienen de horas facturables."},
+    {q:"O", w:2, t:"ope", text:"Proyecto de norma regional sobre compliance (cumplimiento de normas y regulaciones) aplicado al origen de fondos, en discusión."},
+    {q:"A", w:3, t:"tec", text:"Legaltechs ofrecen contratos a bajo costo."}
+  ];
+
+  const CHAPTERS = [
+    {
+      quarter: "Q1 · Enero — Marzo",
+      short: "Mercado",
+      quote: "El año comienza con una pérdida: Aurelia Foods no renueva.",
+      title: "Un cliente migra a la automatización",
+      body: [
+        "Aurelia Foods, cliente recurrente desde hace seis años, no renovará su contrato mensual: migró sus contratos estándar a una plataforma legaltech que cobra una fracción de tu tarifa por hora.",
+        "No es un caso aislado: es la tercera cuenta mediana que recorta presupuesto legal este trimestre, y el comité debe decidir cómo responder antes de que la fuga de clientes se generalice."
+      ],
+      prompt: "Decisión Q1 · Respuesta tecnológica",
+      options: [
+        { key: "A", title: "Ajuste de tarifas",
+          desc: "Bajar la tarifa por hora 30% para igualar a las legaltechs en contratos estándar.",
+          costNote: "Sin inversión inicial. Impacto directo en margen: −10 pts.",
+          consequence: "Al cierre del trimestre, retienes el 85% de la cartera, pero el margen por hora cae en picada. Los socios ven reducida su utilidad trimestral; el equipo junior ve congelados sus bonos.",
+          margenDelta: -10, cajaDelta: 0, concentracionDelta: -5,
+          opexMonthly: null, ingresoMensual: null, costoUnico: null,
+          items: [
+            {q:"F", w:2, t:"com", text:"Retención del 85% de la cartera."},
+            {q:"D", w:4, t:"fin", text:"Margen por hora comprimido 30%."},
+            {q:"A", w:2, t:"com", text:"Guerra de precios con legaltechs."}
+          ] },
+        { key: "B", title: "Herramienta digital de revisión contractual",
+          desc: "Contratar una herramienta digital en línea para automatizar la revisión de contratos rutinarios. La eficiencia permite reasignar dos asistentes a tareas legales.",
+          costNote: "Inversión inicial: US$ 45.000 (instalación y reestructuración) · Opex: US$ 2.500/mes.",
+          consequence: "Tres meses después, la revisión bajó de 6 a 2 horas por contrato. Pero el equipo administrativo se redujo en dos personas con su indemnización, y los socios senior resisten delegar criterio en la máquina.",
+          margenDelta: 4, cajaDelta: 0, concentracionDelta: 8,
+          opexMonthly: 2500, ingresoMensual: null,
+          costoUnico: { label: "Instalación y reestructuración", monto: 45000 },
+          items: [
+            {q:"F", w:3, t:"ope", text:"Eficiencia: revisión de 6 a 2 horas."},
+            {q:"F", w:2, t:"com", text:"Capacidad de atender más contratos sin sumar horas."},
+            {q:"D", w:3, t:"fin", text:"Opex fijo mensual de US$ 2.500."},
+            {q:"D", w:3, t:"tec", text:"Dependencia del proveedor externo."},
+            {q:"D", w:2, t:"hum", text:"Resistencia de socios senior a delegar criterio."},
+            {q:"D", w:2, t:"hum", text:"Reestructuración administrativa con indemnización."}
+          ] },
+        { key: "C", title: "Reenfoque M&A",
+          desc: "Cerrar el área de contratos estándar y concentrar al equipo en fusiones y adquisiciones de alta complejidad.",
+          costNote: "Indemnizaciones y reestructuración: US$ 90.000.",
+          consequence: "El margen por hora sube fuerte, pero la cartera queda concentrada en pocos clientes grandes. Se pierden los ingresos recurrentes del área cerrada, y los ciclos de M&A son cíclicos: en recesión, el pipeline se seca.",
+          margenDelta: 18, cajaDelta: 0, concentracionDelta: 28,
+          opexMonthly: null, ingresoMensual: null,
+          costoUnico: { label: "Indemnizaciones por cierre de área", monto: 90000 },
+          items: [
+            {q:"F", w:3, t:"com", text:"Especialización en servicios premium."},
+            {q:"D", w:4, t:"com", text:"Cartera concentrada en pocos clientes grandes."},
+            {q:"D", w:3, t:"fin", text:"Pérdida de ingresos recurrentes del área cerrada."},
+            {q:"A", w:3, t:"fin", text:"Pipeline de M&A sensible al ciclo económico."},
+            {q:"D", w:2, t:"hum", text:"Despidos en el área de contratos."}
+          ] }
+      ]
+    },
+    {
+      quarter: "Q2 · Abril — Junio",
+      short: "Capital",
+      quote: "Con los números del primer trimestre sobre la mesa, el comité define dónde invertir.",
+      title: "Asignación del fondo de reserva",
+      body: [
+        "El estudio acumula un fondo en dólares de US$ 480.000, construido durante los años de bonanza y pensado como colchón ante una crisis, no como capital de inversión.",
+        "Con la competencia digital ganando terreno, el comité debe decidir si ese fondo se queda intacto o se convierte en el motor de la próxima etapa del estudio."
+      ],
+      prompt: "Decisión Q2 · Gestión de capital",
+      options: [
+        { key: "A", title: "Mantener reserva intacta",
+          desc: "No invertir. Conservar el fondo como colchón de liquidez ante un año incierto.",
+          costNote: "Sin inversión. Costo de oportunidad: pérdida de competitividad digital.",
+          consequence: "Al cierre del trimestre, los clientes empiezan a exigir portal en línea y gestión en tiempo real. Dos cuentas medianas piden propuestas a competidores que ya lo ofrecen.",
+          margenDelta: -4, cajaDelta: 0, concentracionDelta: 5,
+          opexMonthly: null, ingresoMensual: null, costoUnico: null,
+          items: [
+            {q:"F", w:3, t:"fin", text:"Liquidez para un año completo de operación."},
+            {q:"A", w:3, t:"tec", text:"Pérdida de cuentas por falta de portal digital."},
+            {q:"D", w:2, t:"com", text:"Rezago competitivo frente a estudios digitalizados."}
+          ] },
+        { key: "B", title: "Plataforma digital de atención al cliente",
+          desc: "Contratar una plataforma digital con acceso en tiempo real a casos, documentos y facturación. La automatización permite reasignar dos asistentes administrativos.",
+          costNote: "Inversión inicial: US$ 54.000 (instalación y reestructuración) · Opex: US$ 1.800/mes.",
+          consequence: "La atención mejora y la facturación administrativa se reduce 40%: dos asistentes se reasignan a tareas legales facturables. Pero el proveedor cobra postservicio mensual, y migrar los datos es costoso si el proveedor quiebra.",
+          margenDelta: 6, cajaDelta: 0, concentracionDelta: -3,
+          opexMonthly: 1800, ingresoMensual: null,
+          costoUnico: { label: "Instalación y reestructuración administrativa", monto: 54000 },
+          items: [
+            {q:"F", w:3, t:"ope", text:"Facturación administrativa reducida 40%."},
+            {q:"F", w:2, t:"tec", text:"Portal de cliente en tiempo real."},
+            {q:"D", w:3, t:"tec", text:"Dependencia crítica del proveedor externo."},
+            {q:"D", w:3, t:"fin", text:"Indemnización por reasignación de personal."},
+            {q:"D", w:2, t:"hum", text:"Recapacitación de seis meses para asistentes."},
+            {q:"A", w:2, t:"fin", text:"Riesgo de cambio de precios del proveedor."}
+          ] },
+        { key: "C", title: "Software propio de análisis legal",
+          desc: "Invertir US$ 200.000 en construir un sistema propio con potencial de convertirse en producto vendible a otros estudios.",
+          costNote: "Instalación: US$ 200.000 · Opex interno: US$ 4.000/mes (equipo de desarrollo).",
+          consequence: "Creas un activo único que ningún competidor tiene, con potencial de convertirse en un servicio digital por suscripción vendible a otros estudios. Pero el desarrollo drena la reserva, el time-to-market es de 12 a 18 meses —fuera del horizonte del año—.",
+          margenDelta: -8, cajaDelta: 0, concentracionDelta: -12,
+          opexMonthly: 4000, ingresoMensual: null,
+          costoUnico: { label: "Desarrollo inicial del sistema", monto: 200000 },
+          items: [
+            {q:"O", w:3, t:"tec", text:"Potencial línea de ingresos con servicio digital por suscripción (herramienta en línea que se paga periódicamente)."},
+            {q:"F", w:2, t:"fin", text:"Primer paso hacia ingresos no dependientes de horas facturables."},
+            {q:"D", w:4, t:"fin", text:"Reserva reducida a 7 meses de operación."},
+            {q:"D", w:3, t:"tec", text:"Inversión sin retorno visible en el horizonte anual."},
+            {q:"A", w:3, t:"tec", text:"Riesgo de ejecución tecnológica sin experiencia previa."},
+            {q:"D", w:2, t:"hum", text:"Equipo legal sin perfil de product management."}
+          ] }
+      ]
+    },
+    {
+      quarter: "Q3 · Julio — Septiembre",
+      short: "Expansión",
+      quote: "Una licitación regional llega en pleno proceso de reorganización interna.",
+      title: "Licitación regional",
+      body: [
+        "Un consorcio multinacional evalúa contratar un solo estudio legal para sus operaciones en Perú, Chile y Colombia: un contrato que triplicaría la facturación actual con un solo cliente.",
+        "El estudio nunca ha operado fuera de Lima, y el comité debe decidir cómo cubrir la capacidad regional sin comprometer la calidad."
+      ],
+      prompt: "Decisión Q3 · Cobertura regional",
+      options: [
+        { key: "A", title: "Derivación local",
+          desc: "Convenios con estudios establecidos en Chile y Colombia, coordinación a distancia, sin oficinas propias.",
+          costNote: "Sin inversión. Comisión por derivación: 15% de facturación. Coordinación y viajes: US$ 12.000.",
+          consequence: "Sin inversión inicial, pero pierdes control de calidad y plazos. El consorcio exige un interlocutor único y reportes unificados que no puedes garantizar.",
+          margenDelta: -3, cajaDelta: 0, concentracionDelta: 0,
+          opexMonthly: null, ingresoMensual: null,
+          costoUnico: { label: "Coordinación y viajes de supervisión", monto: 12000 },
+          items: [
+            {q:"A", w:3, t:"ope", text:"Falta de control en plazos de socios externos."},
+            {q:"D", w:3, t:"fin", text:"Comisión de 15% sobre facturación derivada."},
+            {q:"D", w:2, t:"ope", text:"Costos de coordinación y viajes de supervisión."},
+            {q:"F", w:2, t:"com", text:"Presencia regional sin inversión de capital."}
+          ] },
+        { key: "B", title: "Sociedad conjunta regional",
+          desc: "Entidad legal compartida con estudios pares de Chile y Colombia para presentarse juntos ante el consorcio.",
+          costNote: "Inversión inicial: US$ 50.000 (constitución legal US$ 20.000 + instalación y puesta en marcha US$ 30.000) · Opex de gobernanza: US$ 1.200/mes.",
+          consequence: "Ganan la licitación corporativa y diversifican ingresos: 34% fuera de Perú. Pero la toma de decisiones es lenta y compartida: cada socio tiene veto.",
+          margenDelta: 7, cajaDelta: 0, concentracionDelta: -8,
+          opexMonthly: 1200, ingresoMensual: null,
+          costoUnico: { label: "Constitución legal e instalación regional", monto: 50000 },
+          items: [
+            {q:"O", w:3, t:"com", text:"Licitación ganada con facturación regional."},
+            {q:"F", w:2, t:"com", text:"34% de ingresos fuera de Perú."},
+            {q:"D", w:3, t:"ope", text:"Gobernanza lenta y compartida con socios regionales."},
+            {q:"D", w:2, t:"fin", text:"Costos de constitución legal en tres jurisdicciones."},
+            {q:"D", w:2, t:"hum", text:"Pérdida de autonomía en decisiones clave."}
+          ] },
+        { key: "C", title: "Compra de estudios locales",
+          desc: "Adquirir estudios pequeños ya operando en Chile y Colombia para tener presencia y control directo inmediato.",
+          costNote: "Inversión: US$ 220.000 (deuda) · Due diligence: US$ 8.000 · Servicio de deuda: US$ 3.500/mes.",
+          consequence: "Control total y margen completo, pero el endeudamiento es alto. La integración cultural de tres equipos en dos países es más difícil de lo previsto: dos socios locales renuncian en el primer trimestre.",
+          margenDelta: 12, cajaDelta: 0, concentracionDelta: -18,
+          opexMonthly: 3500, ingresoMensual: null,
+          costoUnico: { label: "Due diligence y banca de inversión", monto: 8000 },
+          items: [
+            {q:"F", w:3, t:"ope", text:"Control directo de operaciones regionales."},
+            {q:"A", w:4, t:"fin", text:"Deuda de US$ 220.000 sensible a tasas."},
+            {q:"D", w:3, t:"hum", text:"Integración cultural compleja en tres países."},
+            {q:"D", w:2, t:"ope", text:"Homologación de sistemas en tres jurisdicciones."},
+            {q:"D", w:2, t:"ope", text:"Renuncia de dos socios locales en el primer trimestre."}
+          ] }
+      ]
+    },
+    {
+      quarter: "Q4 · Octubre — Diciembre",
+      short: "Crisis",
+      quote: "El año cierra con una decisión que definirá el siguiente.",
+      title: "Nueva regulación sobre el origen de fondos",
+      body: [
+        "El proyecto de norma que se venía discutiendo desde el inicio del año fue aprobado: los estudios legales deberán reportar el origen de fondos de todos sus clientes corporativos, con auditorías trimestrales y multas de hasta US$ 150.000 por incumplimiento. El costo anual de adaptación se estima en US$ 40.000."
+      ],
+      prompt: "Decisión Q4 · Gestión de crisis",
+      options: [
+        { key: "A", title: "Cumplir y recortar",
+          desc: "Adaptarse a la norma recortando gastos discrecionales y congelando bonos para financiar el cumplimiento.",
+          costNote: "Adaptación inicial: US$ 40.000 · Operación de compliance: US$ 3.300/mes · Capacitación normativa: una vez al año.",
+          consequence: "Al cierre del año, cumples la norma, pero el equipo siente el recorte como castigo. La rotación junior sube 25% y el clima interno se deteriora.",
+          margenDelta: -9, cajaDelta: 0, concentracionDelta: 8,
+          opexMonthly: 3300, ingresoMensual: null,
+          costoUnico: { label: "Adaptación normativa inicial", monto: 40000 },
+          items: [
+            {q:"D", w:4, t:"fin", text:"Gasto fijo de compliance sin ingreso adicional."},
+            {q:"A", w:3, t:"hum", text:"Clima interno deteriorado y rotación junior +25%."},
+            {q:"F", w:1, t:"ope", text:"Cumplimiento normativo asegurado (obligación, no ventaja)."},
+            {q:"D", w:2, t:"hum", text:"Costo de reemplazo de US$ 8.000 por junior."}
+          ] },
+        { key: "C", title: "Diversificar cartera con compliance",
+          desc: "Convertir la norma en argumento de venta: posicionarse como estudio preparado para compliance y captar clientes regulados.",
+          costNote: "Inversión inicial: US$ 60.000 · Capacitación normativa: una vez al año · Operación de compliance: US$ 2.000/mes.",
+          consequence: "Conviertes la amenaza en propuesta de valor, pero los resultados tardan 9 a 12 meses —fuera del horizonte anual—.",
+          margenDelta: 3, cajaDelta: 0, concentracionDelta: -12,
+          opexMonthly: 2000, ingresoMensual: null,
+          costoUnico: { label: "Marketing y certificación inicial", monto: 60000 },
+          items: [
+            {q:"O", w:3, t:"com", text:"Nicho de clientes regulados sin atender."},
+            {q:"F", w:2, t:"com", text:"Posicionamiento en compliance regulatorio."},
+            {q:"D", w:3, t:"ope", text:"Resultados a 9-12 meses, fuera del horizonte anual."},
+            {q:"D", w:2, t:"ope", text:"Curva de aprendizaje interna pronunciada."},
+          ] },
+        { key: "D", title: "Aceptar la crisis",
+          desc: "Reconocer que el estudio no puede sostener el año tal como está y abrir un proceso de reestructuración profunda.",
+          costNote: "Sin costo inmediato. Costo de oportunidad: la firma entra en reestructuración.",
+          consequence: "El comité reconoce que el modelo actual no es viable. Se abre un proceso de reestructuración que puede terminar en integración con un competidor, venta parcial o cierre ordenado.",
+          margenDelta: -5, cajaDelta: 0, concentracionDelta: 5,
+          opexMonthly: null, ingresoMensual: null, costoUnico: null,
+          items: [
+            {q:"D", w:4, t:"fin", text:"Reconocimiento de inviabilidad del modelo actual."},
+            {q:"A", w:3, t:"com", text:"Pérdida de posición competitiva en el mercado."},
+            {q:"F", w:2, t:"hum", text:"Decisión madura: reconocer límites antes de que sea tarde."}
+          ] }
+      ]
+    }
+  ];
+
+  const TYPE_LABELS = {
+    fin: { label: 'Fin', cls: 'ft-fin', name: 'Financiero' },
+    com: { label: 'Com', cls: 'ft-com', name: 'Comercial' },
+    tec: { label: 'Tec', cls: 'ft-tec', name: 'Tecnológico' },
+    hum: { label: 'Hum', cls: 'ft-hum', name: 'Humano' },
+    ope: { label: 'Ope', cls: 'ft-ope', name: 'Operativo' }
+  };
+
+  const Q_INFO = {
+    F: { label: 'Fortalezas', varColor: '--f-color' },
+    D: { label: 'Debilidades', varColor: '--d-color' },
+    O: { label: 'Oportunidades', varColor: '--o-color' },
+    A: { label: 'Amenazas', varColor: '--a-color' }
+  };
+
+  const STRATEGY_ARCHETYPES = {
+    FO: { name: 'Estrategia Ofensiva (FO)', desc: 'las fortalezas acumuladas superan a las debilidades, y el entorno percibido es más de oportunidad que de amenaza.' },
+    FA: { name: 'Estrategia Defensiva (FA)', desc: 'las fortalezas dominan sobre las debilidades, pero el entorno percibido es más amenazante que oportuno.' },
+    DO: { name: 'Estrategia de Reorientación (DO)', desc: 'las debilidades pesan más que las fortalezas, aunque el entorno ofrece más oportunidades que amenazas.' },
+    DA: { name: 'Estrategia de Supervivencia (DA)', desc: 'las debilidades superan a las fortalezas y el entorno percibido es más amenazante que oportuno.' }
+  };
+
+  const HISTORY_KEY = 'lexnova_runs_v5';
+  const REFLECTION_KEY = 'lexnova_reflection_v2';
+  const STARTED_KEY = 'lexnova_started_v1';
+  const REFLECTION_FIELDS = ['proceso', 'senal', 'foda', 'aprendizaje'];
+
+  function getInitialPhase() {
+    try {
+      const started = localStorage.getItem(STARTED_KEY);
+      return started === '1' ? 'choosing' : 'welcome';
+    } catch(e) {
+      return 'welcome';
+    }
+  }
+
+  let state = {
+    step: 0,
+    phase: getInitialPhase(),
+    history: [], factors: [],
+    counters: {F:0,D:0,O:0,A:0}, lastBatch: 0,
+    kpis: {...INIT_KPIS},
+    opexItems: [],
+    quiebra: false,
+    crisisTriggered: false,
+    reflection: { proceso: '', senal: '', foda: '', aprendizaje: '' },
+    historyOpen: false,
+    cajaPorTrimestre: [INIT_KPIS.caja]
+  };
+
+  function formatMonto(n){
+    const abs = Math.abs(n).toLocaleString('es-PE');
+    return (n < 0 ? '−$' : '$') + abs;
+  }
+
+  function loadReflectionFromStorage(){
+    try {
+      const raw = localStorage.getItem(REFLECTION_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          REFLECTION_FIELDS.forEach(k => {
+            state.reflection[k] = typeof parsed[k] === 'string' ? parsed[k] : '';
+          });
+        }
+      }
+    } catch(e) { }
+  }
+
+  function persistReflection(){
+    try {
+      localStorage.setItem(REFLECTION_KEY, JSON.stringify(state.reflection));
+    } catch(e) { }
+  }
+
+  function resetState(){
+    state.step = 0;
+    state.phase = "welcome";
+    state.history = [];
+    state.factors = [];
+    state.counters = {F:0,D:0,O:0,A:0};
+    state.lastBatch = 0;
+    state.kpis = {...INIT_KPIS};
+    state.opexItems = [];
+    state.quiebra = false;
+    state.crisisTriggered = false;
+    state.reflection = { proceso: '', senal: '', foda: '', aprendizaje: '' };
+    state.historyOpen = false;
+    state.cajaPorTrimestre = [INIT_KPIS.caja];
+    BASE_FACTORS.forEach(f => addFactor(f.q, f.w, f.t, f.text, 0));
+    try {
+      localStorage.removeItem(REFLECTION_KEY);
+      localStorage.removeItem(STARTED_KEY);
+    } catch(e) {}
+  }
+
+  function formatKpiValue(id, val){
+    const def = KPI_DEFS.find(d => d.id === id);
+    if (def.unit === 'usd') return formatMonto(val);
+    return val + '%';
+  }
+
+  function formatDelta(id, delta){
+    if (delta === 0) return '<span class="kpi-delta" style="color:var(--text-muted)">±0</span>';
+    const def = KPI_DEFS.find(d => d.id === id);
+    const isGood = def.goodWhenUp ? delta > 0 : delta < 0;
+    const cls = isGood ? 'delta-good' : 'delta-bad';
+    const sign = delta > 0 ? '+' : '';
+    const text = def.unit === 'usd' ? (delta > 0 ? '+' : '') + formatMonto(delta) : `${sign}${delta}%`;
+    return `<span class="kpi-delta ${cls}">${text}</span>`;
+  }
+
+  function addFactor(q, w, t, text, b) {
+    state.counters[q]++;
+    const code = q + '-' + String(state.counters[q]).padStart(2,'0');
+    state.factors.push({ q, w, t, text, batchId: b, code });
+  }
+
+  function quadrantSums(){
+    const sums = {F:0,D:0,O:0,A:0};
+    state.factors.forEach(f => sums[f.q] += f.w);
+    return sums;
+  }
+
+  function classifyStrategy(sums){
+    const totalInternal = sums.F + sums.D;
+    const totalExternal = sums.O + sums.A;
+    const threshold = 0.15;
+    const internalBalanced = totalInternal === 0 || Math.abs(sums.F - sums.D) / totalInternal < threshold;
+    const externalBalanced = totalExternal === 0 || Math.abs(sums.O - sums.A) / totalExternal < threshold;
+    const internalKey = internalBalanced ? null : (sums.F > sums.D ? 'F' : 'D');
+    const externalKey = externalBalanced ? null : (sums.O > sums.A ? 'O' : 'A');
+    if (internalKey && externalKey) return { archetype: STRATEGY_ARCHETYPES[internalKey + externalKey], balanced: false };
+    return {
+      archetype: internalKey ? { name: STRATEGY_ARCHETYPES[internalKey + (externalKey || 'O')].name + ' con entorno equilibrado', desc: STRATEGY_ARCHETYPES[internalKey + (externalKey || 'O')].desc } :
+                 externalKey ? { name: 'Perfil interno equilibrado con entorno ' + (externalKey === 'O' ? 'oportuno' : 'amenazante'), desc: STRATEGY_ARCHETYPES['F' + externalKey].desc } :
+                 { name: 'Perfil estratégico equilibrado', desc: 'No hay un cuadrante que domine con claridad: fortalezas y debilidades internas, oportunidades y amenazas externas, están prácticamente balanceadas.' },
+      balanced: true
+    };
+  }
+
+  function archetypeFromHistory(history){
+    const factors = [];
+    history.forEach(h => {
+      const ch = CHAPTERS[h.step];
+      const opt = ch.options.find(o => o.key === h.optKey);
+      opt.items.forEach(it => factors.push({ q: it.q, w: it.w }));
+    });
+    const sums = {F:0,D:0,O:0,A:0};
+    factors.forEach(f => sums[f.q] += f.w);
+    return classifyStrategy(sums).archetype;
+  }
+
+  function calcularDeterminante(){
+    const currentArch = classifyStrategy(quadrantSums()).archetype;
+    let mejorStep = -1;
+    let mejorScore = -1;
+    let mejorDetalle = null;
+
+    CHAPTERS.forEach((ch, i) => {
+      const chosen = state.history.find(h => h.step === i);
+      if (!chosen) return;
+      let cambios = 0;
+      ch.options.filter(o => o.key !== chosen.optKey).forEach(o => {
+        const altHistory = state.history.map(h => h.step === i ? { step: i, optKey: o.key } : h);
+        const altArch = archetypeFromHistory(altHistory);
+        if (altArch.name !== currentArch.name) cambios++;
+      });
+      if (cambios > mejorScore || (cambios === mejorScore && i < mejorStep)) {
+        mejorScore = cambios;
+        mejorStep = i;
+        mejorDetalle = { chapter: ch, cambios, totalAlternativas: ch.options.length - 1 };
+      }
+    });
+
+    return mejorDetalle;
+  }
+
+  function beneficioPrincipal(opt){
+    const candidatos = opt.items.filter(it => it.q === 'F' || it.q === 'O');
+    if (!candidatos.length) return 'Sin beneficio destacado identificado.';
+    candidatos.sort((a,b) => b.w - a.w);
+    return candidatos[0].text;
+  }
+  function riesgoPrincipal(opt){
+    const candidatos = opt.items.filter(it => it.q === 'D' || it.q === 'A');
+    if (!candidatos.length) return 'Sin riesgo destacado identificado.';
+    candidatos.sort((a,b) => b.w - a.w);
+    return candidatos[0].text;
+  }
+
+  function buildNarrative(sums){
+    const result = classifyStrategy(sums);
+    const strat = result.archetype;
+    const margenDelta = state.kpis.margen - INIT_KPIS.margen;
+    const cajaDelta = state.kpis.caja - INIT_KPIS.caja;
+    const concDelta = state.kpis.concentracion - INIT_KPIS.concentracion;
+    const opexTotal = state.opexItems.reduce((s, o) => s + (o.type === 'recurring' ? o.amount * o.months : o.amount), 0);
+
+    let finance = 'En el escenario simulado, al cierre del año, ';
+    finance += margenDelta > 0 ? `el margen operativo mejoró ${margenDelta} puntos respecto al inicio` : margenDelta < 0 ? `el margen operativo cayó ${Math.abs(margenDelta)} puntos respecto al inicio` : 'el margen operativo se mantuvo sin cambios respecto al inicio';
+    finance += cajaDelta >= 0 ? `, la caja aumentó en ${formatMonto(cajaDelta)}` : `, la caja se redujo en ${formatMonto(Math.abs(cajaDelta))}`;
+    if (opexTotal > 0) finance += ` (de los cuales ${formatMonto(opexTotal)} corresponden a costos recurrentes de decisiones previas)`;
+    finance += concDelta > 0 ? ` y el riesgo de concentración de clientes aumentó ${concDelta} puntos.` : concDelta < 0 ? ` y el riesgo de concentración de clientes disminuyó ${Math.abs(concDelta)} puntos.` : ' y el riesgo de concentración se mantuvo estable.';
+
+    const p1 = `<p>El patrón de decisiones tomadas corresponde a una <strong>${strat.name}</strong>: ${strat.desc}</p>`;
+
+    const decisionesTexto = state.history.map(h => {
+      const ch = CHAPTERS[h.step];
+      const opt = ch.options.find(o => o.key === h.optKey);
+      return `en ${ch.quarter.split('·')[0].trim()} elegiste «${opt.title}»`;
+    }).join('; ');
+
+    const pDecisiones = decisionesTexto
+      ? `<p>Ese patrón surgió de tus elecciones: ${decisionesTexto}. Cada una aportó factores al balance acumulado de la matriz FODA.</p>`
+      : '';
+
+    const p2 = `<p>${finance}</p>`;
+    const p3 = `<p>Ninguna de las cuatro rutas —ofensiva, defensiva, de reorientación o de supervivencia— es "la correcta" en abstracto: cada una implica un trade-off distinto entre crecer, controlar el riesgo y preservar capital. El arquetipo es una etiqueta orientativa del balance final, no una calificación de la calidad de tus decisiones.</p>`;
+
+    const pEstructural = `<p>Algunas debilidades del punto de partida —como la dependencia de un modelo de ingresos específico o de un cliente ancla— no se resuelven en el horizonte de un año. El balance final muestra avances y tensiones, no una transformación completa.</p>`;
+
+    let p4 = '';
+    if (state.kpis.caja < 50000 && !state.quiebra) {
+      p4 = `<p><strong>Alerta de liquidez:</strong> la caja quedó en ${formatMonto(state.kpis.caja)}, menos de dos meses de operación.</p>`;
+    }
+    if (state.quiebra) {
+      p4 = `<div class="crisis-box"><h3>Estado de crisis</h3><p>La empresa atravesó una crisis de solvencia durante el año.</p></div>`;
+    }
+    return p1 + pDecisiones + p2 + p3 + pEstructural + p4;
+  }
+
+  function renderCashChart(){
+    const vals = state.cajaPorTrimestre;
+    if (!vals || vals.length < 2) return '';
+
+    const w = 640, h = 190, padL = 60, padR = 24, padT = 20, padB = 40;
+    const innerW = w - padL - padR;
+    const innerH = h - padT - padB;
+
+    const max = Math.max(...vals, 100000);
+    const min = Math.min(...vals, 0);
+    const range = max - min || 1;
+    const zeroY = padT + innerH - ((0 - min) / range) * innerH;
+
+    const stepX = innerW / (vals.length - 1);
+    const puntos = vals.map((v, i) => ({
+      x: padL + i * stepX,
+      y: padT + innerH - ((v - min) / range) * innerH,
+      v
+    }));
+
+    const path = puntos.map((p, i) => (i === 0 ? 'M' : 'L') + p.x + ',' + p.y).join(' ');
+    const labelX = ['Ene', 'Mar', 'Jun', 'Sep', 'Dic'];
+
+    const zeroLine = (min < 0 && max > 0)
+      ? `<line x1="${padL}" y1="${zeroY}" x2="${w - padR}" y2="${zeroY}" stroke="#a81c3c" stroke-width="1" stroke-dasharray="4 3"/>
+         <text x="${padL - 8}" y="${zeroY + 4}" text-anchor="end" font-family="var(--mono)" font-size="10" fill="#a81c3c">$0</text>`
+      : '';
+
+    const colorLinea = vals[vals.length - 1] < vals[0] ? '#b8342f' : '#2f8f5b';
+    const colorPunto = v => v < 0 ? '#a81c3c' : colorLinea;
+
+    const circles = puntos.map(p =>
+      `<circle cx="${p.x}" cy="${p.y}" r="4" fill="${colorPunto(p.v)}" stroke="#ffffff" stroke-width="2"/>`
+    ).join('');
+
+    const labels = puntos.map((p, i) => `
+      <text x="${p.x}" y="${h - 22}" text-anchor="middle" font-family="var(--mono)" font-size="10" fill="#5a6672">${labelX[i]}</text>
+      <text x="${p.x}" y="${h - 8}" text-anchor="middle" font-family="var(--mono)" font-size="10" fill="#12171d">${p.v < 0 ? '−' : ''}$${Math.abs(p.v/1000).toFixed(0)}k</text>
+    `).join('');
+
+    return `<div class="cash-chart">
+      <span class="eyebrow">Trayectoria financiera del año · Caja al cierre de cada trimestre</span>
+      <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Trayectoria financiera del año">
+        ${zeroLine}
+        <path d="${path}" fill="none" stroke="${colorLinea}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+        ${circles}
+        ${labels}
+      </svg>
+    </div>`;
+  }
+
+  function renderBalanceRows(sums){
+    const maxSum = Math.max(sums.F, sums.D, sums.O, sums.A, 1);
+    return ['F','D','O','A'].map(q => {
+      const pct = Math.round(sums[q] / maxSum * 100);
+      return `<div class="balance-row"><span>${Q_INFO[q].label}</span><div class="b-track"><div class="b-fill" style="width:${pct}%;background:var(${Q_INFO[q].varColor})"></div></div><span>${sums[q]}</span></div>`;
+    }).join('');
+  }
+
+  function getPreguntas(){
+    return [
+      '¿Qué decisión produjo el beneficio más importante para la organización y por qué?',
+      '¿Qué riesgo aceptaste o decidiste no aceptar al tomar una de tus decisiones?',
+      '¿Qué consecuencia no habías previsto o subestimaste y qué información adicional habrías necesitado?',
+      '¿Qué aprendiste sobre la relación entre beneficios, riesgos y recursos al gestionar un proceso de cambio?'
+    ];
+  }
+
+  function getTituloReflexion(){
+    return 'Reflexión sobre las decisiones y sus consecuencias';
+  }
+
+  function getCloseNote(){
+    return '<div class="close-note"><strong>Pregunta de cierre para el taller:</strong> ¿qué decisiones tomadas en esta simulación podrían sostenerse en una organización real y cuáles requerirían ajustes antes de implementarse?</div>';
+  }
+
+  function renderReporteFinanciero(){
+    const sums = quadrantSums();
+    return `<div class="verdict-head"><span class="eyebrow">Diagnóstico Final · Cierre del Año</span><h2 class="chapter-title">Balance Estratégico</h2></div>
+      <div class="prose">${buildNarrative(sums)}</div>
+
+      ${renderCashChart()}
+
+      <div class="balance-section">${renderBalanceRows(sums)}</div>
+
+      <button class="nav-btn" onclick="window.irAContrafactual()">Ver análisis contrafactual →</button>`;
+  }
+
+  function renderContrafactual(){
+    const secciones = [];
+    CHAPTERS.forEach((ch, i) => {
+      const chosen = state.history.find(h => h.step === i);
+      if (!chosen) return;
+      const actual = ch.options.find(o => o.key === chosen.optKey);
+      const alternativas = ch.options.filter(o => o.key !== chosen.optKey).map(o => {
+        const ben = beneficioPrincipal(o);
+        const rie = riesgoPrincipal(o);
+        return `<li>
+          <strong>${o.title}</strong>
+          <div class="cf-block">
+            <p><span class="cf-label">Beneficio principal:</span> ${ben}</p>
+            <p><span class="cf-label">Riesgo principal:</span> ${rie}</p>
+            <p><span class="cf-label">Costo declarado:</span> ${o.costNote || 'requiere valorar sus costos y consecuencias organizacionales.'}</p>
+          </div>
+        </li>`;
+      }).join('');
+      secciones.push(`<h3>${ch.quarter} · ${ch.short}</h3><p><strong>Decisión tomada:</strong> ${actual.title}</p><p>Si hubieras elegido otra alternativa, habrías cambiado la combinación de beneficios, riesgos y recursos:</p><ul>${alternativas}</ul>`);
+    });
+    return `<button class="back-link" onclick="window.volverAlReporte()">← Volver al reporte financiero</button>
+      <div class="verdict-head"><span class="eyebrow">Análisis contrafactual</span><h2 class="chapter-title">¿Qué habría cambiado con otra decisión?</h2></div>
+      <p class="prose">El objetivo no es identificar una alternativa perfecta, sino comparar qué se habría ganado, qué se habría sacrificado y qué riesgo adicional se habría asumido.</p>
+      <div style="margin-bottom:8px">${secciones.join('')}</div>
+      <button class="nav-btn" onclick="window.irAReflexion()">Ver reflexión final →</button>`;
+  }
+
+  function renderReflexion(){
+    const preguntas = getPreguntas();
+    const tituloReflexion = getTituloReflexion();
+    const closeNote = getCloseNote();
+    const totalCampos = Math.max(REFLECTION_FIELDS.length, preguntas.length);
+    const bloques = [];
+    for (let i = 0; i < totalCampos; i++) {
+      const key = REFLECTION_FIELDS[i];
+      const pregunta = preguntas[i] || ('Pregunta ' + (i + 1));
+      const valor = (key && state.reflection[key]) ? String(state.reflection[key]).replace(/</g,'&lt;') : '';
+      bloques.push(
+        '<div class="reflection-q">' +
+          '<label for="refl-' + i + '">' + (i + 1) + '. ' + pregunta + '</label>' +
+          '<span class="reflection-hint" id="refl-hint-' + i + '">Tus respuestas se guardan automáticamente.</span>' +
+          '<textarea id="refl-' + i + '" data-refl-key="' + i + '" aria-describedby="refl-hint-' + i + '" placeholder="Escribe tu reflexión aquí..." rows="4">' + valor + '</textarea>' +
+        '</div>'
+      );
+    }
+    return `<button class="back-link" onclick="window.volverAlContrafactual()">← Volver al análisis contrafactual</button>
+      <div class="debrief-box" style="background:transparent;border-left:none;padding:0;margin:0">
+        <h3 style="font-family:var(--serif);font-size:1.4rem;margin-bottom:20px">${tituloReflexion}</h3>
+        ${bloques.join('')}
+      </div>
+      ${closeNote}
+      <button class="primary-btn" onclick="window.exportSummary()" style="margin-top:24px">Descargar resumen (.txt)</button>
+      <button class="primary-btn secondary-btn" onclick="window.reiniciarAnio()">Reiniciar año</button>`;
+  }
+
+  function bindReflectionInputs(){
+    document.querySelectorAll('.reflection-q textarea').forEach(ta => {
+      const idx = parseInt(ta.getAttribute('data-refl-key'), 10);
+      const key = REFLECTION_FIELDS[idx];
+      if (!key) return;
+      ta.addEventListener('input', () => {
+        state.reflection[key] = ta.value;
+        persistReflection();
+      });
+    });
+  }
+
+  window.irAContrafactual = () => { state.phase = "contrafactual"; renderAll(); window.scrollTo({top:0, behavior:'smooth'}); };
+  window.irAReflexion = () => { state.phase = "reflexion"; renderAll(); window.scrollTo({top:0, behavior:'smooth'}); };
+  window.volverAlReporte = () => { state.phase = "end"; renderAll(); window.scrollTo({top:0, behavior:'smooth'}); };
+  window.volverAlContrafactual = () => { state.phase = "contrafactual"; renderAll(); window.scrollTo({top:0, behavior:'smooth'}); };
+
+  function mostrarModalReinicio(){
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'modal-title');
+    overlay.innerHTML = `
+      <div class="modal-box">
+        <h3 id="modal-title">¿Reiniciar el año?</h3>
+        <p>Se perderá el progreso actual: decisiones, matriz FODA acumulada y reflexión. Las corridas guardadas en el historial no se eliminan.</p>
+        <div class="modal-actions">
+          <button class="modal-btn secondary" data-action="cancel">Cancelar</button>
+          <button class="modal-btn primary" data-action="confirm">Reiniciar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const btnConfirm = overlay.querySelector('[data-action="confirm"]');
+    const btnCancel = overlay.querySelector('[data-action="cancel"]');
+    const cerrar = () => { document.body.removeChild(overlay); document.removeEventListener('keydown', onKey); };
+    const onKey = (e) => { if (e.key === 'Escape') cerrar(); };
+    btnConfirm.addEventListener('click', () => { cerrar(); resetState(); renderAll(); window.scrollTo({top:0, behavior:'smooth'}); });
+    btnCancel.addEventListener('click', cerrar);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(); });
+    document.addEventListener('keydown', onKey);
+    btnConfirm.focus();
+  }
+
+  window.reiniciarAnio = () => { mostrarModalReinicio(); };
+
+  function syncReflection(){
+    document.querySelectorAll('.reflection-q textarea').forEach(ta => {
+      const idx = parseInt(ta.getAttribute('data-refl-key'), 10);
+      const key = REFLECTION_FIELDS[idx];
+      if (key) state.reflection[key] = ta.value;
+    });
+    persistReflection();
+  }
+
+  window.exportSummary = () => {
+    syncReflection();
+    const sums = quadrantSums();
+    const strat = classifyStrategy(sums).archetype;
+    const preguntas = getPreguntas();
+
+    const lines = [];
+    lines.push('LexNova · Resumen de la simulación anual');
+    lines.push('='.repeat(52));
+    lines.push('');
+    lines.push('DECISIONES TOMADAS');
+    lines.push('-'.repeat(52));
+    state.history.forEach(h => {
+      const ch = CHAPTERS[h.step];
+      const opt = ch.options.find(o => o.key === h.optKey);
+      lines.push(`${ch.quarter} · ${ch.short}`);
+      lines.push(`  Decisión: ${opt.title}`);
+      if (opt.costNote) lines.push(`  Costo declarado: ${opt.costNote}`);
+    });
+    lines.push('');
+    lines.push('INDICADORES DE CONTEXTO');
+    lines.push('-'.repeat(52));
+    lines.push(`Margen operativo: ${state.kpis.margen}% (inicio: ${INIT_KPIS.margen}%)`);
+    lines.push(`Caja: ${formatMonto(state.kpis.caja)} (inicio: ${formatMonto(INIT_KPIS.caja)})`);
+    lines.push(`Riesgo de concentración: ${state.kpis.concentracion}% (inicio: ${INIT_KPIS.concentracion}%)`);
+    const opexTotal = state.opexItems.reduce((s, o) => s + (o.type === 'recurring' ? o.amount * o.months : o.amount), 0);
+    if (opexTotal > 0) lines.push(`Costos recurrentes acumulados: ${formatMonto(opexTotal)}`);
+    if (state.quiebra) lines.push('Estado: CRISIS DE LIQUIDEZ SIMULADA');
+    lines.push('');
+    lines.push('EVOLUCIÓN DE LA CAJA');
+    lines.push('-'.repeat(52));
+    const labelT = ['Inicio', 'Q1 (Ene-Mar)', 'Q2 (Abr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dic)'];
+    state.cajaPorTrimestre.forEach((v, i) => {
+      let flecha = '';
+      if (i > 0) {
+        const prev = state.cajaPorTrimestre[i-1];
+        if (v > prev) flecha = '  ▲ +' + formatMonto(v - prev);
+        else if (v < prev) flecha = '  ▼ −' + formatMonto(Math.abs(v - prev)).replace('$','$');
+        else flecha = '  =';
+      }
+      lines.push(`${labelT[i].padEnd(16)}${formatMonto(v)}${flecha}`);
+    });
+    const neto = state.cajaPorTrimestre[state.cajaPorTrimestre.length - 1] - state.cajaPorTrimestre[0];
+    lines.push('');
+    lines.push(`Tendencia neta del año: ${neto >= 0 ? '+' : '−'}${formatMonto(Math.abs(neto))} (${neto >= 0 ? 'positiva' : 'negativa'})`);
+    lines.push('');
+    lines.push('BALANCE DE CONSECUENCIAS');
+    lines.push('-'.repeat(52));
+    lines.push('El resultado se interpreta como una combinación de beneficios, riesgos y recursos, no como una calificación única.');
+    lines.push('');
+    lines.push('ARQUETIPO ESTRATÉGICO FODA');
+    lines.push('-'.repeat(52));
+    lines.push(`${strat.name}`);
+    lines.push(strat.desc);
+    lines.push('');
+
+    const currentArch = strat;
+    lines.push('ARQUETIPOS ALTERNATIVOS RELEVANTES');
+    lines.push('-'.repeat(52));
+    let totalAltRelevantes = 0;
+    let totalAltDescartadas = 0;
+    CHAPTERS.forEach((ch, i) => {
+      const chosen = state.history.find(h => h.step === i);
+      if (!chosen) return;
+      const relevantes = [];
+      ch.options.filter(o => o.key !== chosen.optKey).forEach(o => {
+        const altHistory = state.history.map(h => h.step === i ? { step: i, optKey: o.key } : h);
+        const altArch = archetypeFromHistory(altHistory);
+        if (altArch.name === currentArch.name) {
+          totalAltDescartadas++;
+        } else {
+          relevantes.push(`    Si hubieras elegido "${o.title}" → ${altArch.name}`);
+          totalAltRelevantes++;
+        }
+      });
+      if (relevantes.length > 0) {
+        lines.push(`  ${ch.short}:`);
+        relevantes.forEach(r => lines.push(r));
+      }
+    });
+    if (totalAltRelevantes === 0) {
+      lines.push('  Ninguna alternativa habría cambiado el patrón: la ruta fue consistente.');
+    } else if (totalAltDescartadas > 0) {
+      lines.push(`  (${totalAltDescartadas} alternativa${totalAltDescartadas === 1 ? '' : 's'} adicional${totalAltDescartadas === 1 ? '' : 'es'} habría${totalAltDescartadas === 1 ? '' : 'n'} mantenido el patrón.)`);
+    }
+    lines.push('');
+    const determinante = calcularDeterminante();
+    if (determinante && determinante.cambios > 0) {
+      lines.push(`DECISIÓN MÁS DETERMINANTE: ${determinante.chapter.quarter} · ${determinante.chapter.short}`);
+      lines.push(`De sus ${determinante.totalAlternativas} alternativa${determinante.totalAlternativas === 1 ? '' : 's'}, ${determinante.cambios} habría${determinante.cambios === 1 ? '' : 'n'} cambiado el arquetipo final.`);
+      lines.push('');
+    }
+    lines.push('REFLEXIÓN');
+    lines.push('-'.repeat(52));
+    preguntas.forEach((p, i) => {
+      const key = REFLECTION_FIELDS[i];
+      const respuesta = key ? state.reflection[key] : '';
+      lines.push(`P: ${p}`);
+      lines.push(`R: ${respuesta || '(sin responder)'}`);
+      lines.push('');
+    });
+    lines.push('');
+    lines.push('MATRIZ FODA ACUMULADA');
+    lines.push('-'.repeat(52));
+    ['F','D','O','A'].forEach(q => {
+      lines.push(`${Q_INFO[q].label} (peso total: ${sums[q]}):`);
+      state.factors.filter(f => f.q === q).forEach(f => {
+        const t = TYPE_LABELS[f.t] ? TYPE_LABELS[f.t].name : '—';
+        const lote = f.batchId === 0 ? 'Base' : CHAPTERS[f.batchId - 1].short;
+        lines.push(`  ${f.code} [${t}] [${lote}] — ${f.text}`);
+      });
+      lines.push('');
+    });
+
+    const blob = new Blob([lines.join('\n')], {type:'text/plain;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'lexnova-resumen.txt';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  function loadRuns(){
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch(e){ return []; }
+  }
+  function saveRun(){
+    try {
+      const runs = loadRuns();
+      const sums = quadrantSums();
+      const strat = classifyStrategy(sums).archetype;
+      const decisions = state.history.map(h => {
+        const ch = CHAPTERS[h.step];
+        const opt = ch.options.find(o => o.key === h.optKey);
+        return { step: h.step, short: ch.short, title: opt.title };
+      });
+      runs.unshift({
+        date: new Date().toISOString(),
+        archetype: strat.name,
+        quiebra: state.quiebra,
+        kpis: { ...state.kpis },
+        decisions: decisions
+      });
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(runs.slice(0, 10)));
+    } catch(e){}
+  }
+
+  function renderHistory(){
+    const cont = document.getElementById('history-container');
+    if (!state.historyOpen) { cont.innerHTML = ''; return; }
+    const runs = loadRuns();
+    if (!runs.length) {
+      cont.innerHTML = `<div class="history-panel"><h3>Historial de corridas</h3><p class="history-empty">Aún no hay corridas guardadas.</p></div>`;
+      return;
+    }
+    cont.innerHTML = `<div class="history-panel"><h3>Historial (últimas ${runs.length})</h3>${runs.map(r => {
+      const d = new Date(r.date);
+      const fecha = d.toLocaleString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+      const crisisTag = r.quiebra ? ' <span style="color:#e07a72;font-family:var(--mono);font-size:0.68rem">[CRISIS]</span>' : '';
+      const decisionsHtml = (r.decisions && r.decisions.length)
+        ? `<div class="h-decisions">${r.decisions.map(x => `Q${x.step + 1} ${x.short}: ${x.title}`).join(' · ')}</div>`
+        : '';
+      return `<div class="history-item">
+        <div class="h-head">
+          <div><span class="h-arch">${r.archetype}${crisisTag}</span><br><span class="h-date">${fecha}</span></div>
+          <div style="font-family:var(--mono);font-size:0.72rem;color:var(--text-muted)">Balance de consecuencias</div>
+        </div>
+        ${decisionsHtml}
+      </div>`;
+    }).join('')}</div>`;
+  }
+
+  function renderOpexPanel(){
+    const cont = document.getElementById('opex-container');
+    const recurring = state.opexItems.filter(o => o.type === 'recurring');
+    const oneTime = state.opexItems.filter(o => o.type === 'oneTime');
+    if (!recurring.length && !oneTime.length) { cont.innerHTML = ''; return; }
+    const totalRec = recurring.reduce((s, o) => s + o.amount * o.months, 0);
+    const totalOne = oneTime.reduce((s, o) => s + o.amount, 0);
+    const totalGlobal = totalRec + totalOne;
+
+    let html = '<div class="opex-panel"><h4>Recursos comprometidos y efectos financieros</h4>';
+    html += '<p class="opex-intro">Estos importes muestran recursos utilizados en la simulación; deben interpretarse junto con los efectos en personas, clientes, operaciones y estrategia.</p>';
+    /* FIX: nota de contexto de una línea, sin sobrecarga cognitiva */
+    html += '<p class="opex-contexto">Los recursos comprometidos afectan la caja. Los beneficios y ahorros operativos se reflejan en el margen y en los demás indicadores.</p>';
+
+    if (recurring.length) {
+      html += recurring.map(o => `<div class="opex-item"><span>${o.label} · ${o.months} mes(es)</span><span>−${formatMonto(o.amount * o.months)}</span></div>`).join('');
+      html += `<div class="opex-total"><span>Subtotal recurrente</span><span>−${formatMonto(totalRec)}</span></div>`;
+    }
+    if (oneTime.length) {
+      html += oneTime.map(o => `<div class="opex-item" style="opacity:0.8"><span>${o.label} <em>(único)</em></span><span>−${formatMonto(o.amount)}</span></div>`).join('');
+      html += `<div class="opex-total" style="border-top:none"><span>Subtotal costos únicos</span><span>−${formatMonto(totalOne)}</span></div>`;
+    }
+    html += `<div class="opex-total-global"><span>Total de recursos comprometidos</span><span>−${formatMonto(totalGlobal)}</span></div>`;
+    html += '</div>';
+    cont.innerHTML = html;
+  }
+
+  function renderWelcome(){
+    return `
+      <div class="welcome-screen">
+        <span class="quarter-epigraph">LEXNOVA · Inicio de la simulación</span>
+        <h1 class="chapter-title">Bienvenido a LexNova</h1>
+        <p class="quarter-quote">Vas a dirigir un estudio legal durante un año fiscal.</p>
+
+        <div class="prose">
+          <h3>Contexto de la organización</h3>
+          <p>LexNova es un estudio legal con 28 años de trayectoria en Lima. Su cartera combina clientes corporativos medianos y grandes, y el 78% de sus ingresos proviene de horas facturables.</p>
+          <p>El año que vas a dirigir comienza con tensiones: clientes que migran a plataformas digitales, un fondo de reserva que puede convertirse en motor de transformación, una licitación regional que exige cobertura en tres países y un proyecto de norma regional sobre compliance que se discute en el Congreso.</p>
+
+          <h3>Tu rol</h3>
+          <p>Vas a asumir el rol del comité de dirección del estudio. En cada trimestre enfrentarás un dilema real y deberás elegir entre tres alternativas. Ninguna es «la correcta»: cada una implica beneficios, riesgos y costos.</p>
+
+          <h3>Cómo funciona</h3>
+          <ul>
+            <li>Cada decisión muestra su beneficio esperado, su riesgo principal y su costo declarado.</li>
+            <li>Las decisiones alimentan la <strong>matriz FODA</strong> visible a la derecha y actualizan los <strong>indicadores</strong> del estudio.</li>
+            <li>Al cerrar el año verás un <strong>balance de consecuencias</strong>, un <strong>análisis contrafactual</strong> de las alternativas no elegidas y una <strong>reflexión final</strong>.</li>
+            <li>Tus respuestas se guardan automáticamente en tu navegador.</li>
+          </ul>
+          <p class="kpi-context">No existe una combinación óptima de indicadores. El propósito es analizar los beneficios, riesgos, recursos y consecuencias organizacionales de cada decisión.</p>
+        </div>
+        <button class="primary-btn" onclick="window.comenzarAnio()">Comenzar el año fiscal →</button>
+      </div>`;
+  }
+
+  window.comenzarAnio = () => {
+    try { localStorage.setItem(STARTED_KEY, '1'); } catch(e) {}
+    state.phase = 'choosing';
+    renderAll();
+    window.scrollTo({top:0, behavior:'smooth'});
+  };
+
+  function renderAll(){
+    const kC = document.getElementById('kpi-container');
+    kC.innerHTML = KPI_DEFS.map(d => {
+      const val = state.kpis[d.id];
+      return `<div class="kpi"><span class="kpi-label">${d.l}</span><div class="kpi-val">${formatKpiValue(d.id, val)}${formatDelta(d.id, val - INIT_KPIS[d.id])}</div><p class="kpi-desc">${d.d}</p></div>`;
+    }).join('') + `<div class="kpi-context">Los indicadores muestran el estado del estudio. No hay una combinación óptima: cada decisión implica trade-offs entre margen, liquidez y concentración de clientes.</div>`;
+
+    renderOpexPanel();
+
+    const sC = document.getElementById('stage-container');
+    if (state.phase === "welcome") {
+      sC.innerHTML = renderWelcome();
+    } else if (state.phase === "end") {
+      sC.innerHTML = renderReporteFinanciero();
+    } else if (state.phase === "contrafactual") {
+      sC.innerHTML = renderContrafactual();
+    } else if (state.phase === "reflexion") {
+      sC.innerHTML = renderReflexion();
+      bindReflectionInputs();
+    } else {
+      const ch = CHAPTERS[state.step];
+      if (state.phase === "choosing") {
+        sC.innerHTML = `
+          <span class="quarter-epigraph">${ch.quarter}</span>
+          <p class="quarter-quote">"${ch.quote}"</p>
+          <h2 class="chapter-title">${ch.title}</h2>
+          <div class="prose">${ch.body.map(p => `<p>${p}</p>`).join('')}</div>
+          <div class="decisions"><h3 class="decision-prompt">${ch.prompt}</h3>${ch.options.map(o => {
+            const ben = beneficioPrincipal(o);
+            const rie = riesgoPrincipal(o);
+            return `<button class="option-btn" onclick="window.makeChoice('${o.key}')">
+              <span class="opt-text">${o.title}</span><br>
+              <span class="opt-desc">${o.desc}</span>
+              <span class="opt-tradeoff opt-ben"><strong>Beneficio esperado:</strong> ${ben}</span>
+              <span class="opt-tradeoff opt-rie"><strong>Riesgo principal:</strong> ${rie}</span>
+              ${o.costNote ? `<span class="opt-cost"><strong>Costo:</strong> ${o.costNote}</span>` : ''}
+            </button>`;
+          }).join('')}</div>`;
+      } else {
+        const opt = ch.options.find(o => o.key === state.history[state.step].optKey);
+        const isLast = state.step === CHAPTERS.length - 1;
+        sC.innerHTML = `
+          <span class="quarter-epigraph">${ch.quarter} · Consecuencia simulada</span>
+          <h2 class="chapter-title">Cierre del trimestre</h2>
+          <p class="prose">${opt.consequence}</p>
+          ${opt.costNote ? `<p class="prose" style="font-family:var(--mono);font-size:0.85rem;color:var(--ink-faint)">${opt.costNote}</p>` : ''}
+          <button class="primary-btn" onclick="window.advance()">${isLast ? 'Cerrar el año' : 'Avanzar al siguiente trimestre'}</button>`;
+      }
+    }
+
+    ['F','D','O','A'].forEach(q => {
+      document.getElementById('count-' + q).textContent = state.counters[q];
+      renderQuadrantList(q);
+    });
+    document.getElementById('matrix-tally').textContent = state.factors.length + ' factores';
+    renderProgress();
+    renderLog();
+    renderHistory();
+  }
+
+  function renderQuadrantList(q){
+    const list = document.getElementById('list-' + q);
+    const items = state.factors.filter(f => f.q === q);
+    if (!items.length) { list.innerHTML = ''; return; }
+    const groups = {};
+    items.forEach(f => {
+      if (!groups[f.batchId]) groups[f.batchId] = [];
+      groups[f.batchId].push(f);
+    });
+    const batchOrder = Object.keys(groups).map(Number).sort((a,b) => a - b);
+    list.innerHTML = batchOrder.map(b => {
+      let label;
+      if (b === 0) label = 'Punto de partida';
+      else {
+        const ch = CHAPTERS[b - 1];
+        label = ch ? `${ch.quarter.split('·')[0].trim()} · ${ch.short}` : `Capítulo ${b}`;
+      }
+      const lis = groups[b].map(f => {
+        const t = TYPE_LABELS[f.t] || TYPE_LABELS.ope;
+        return `<li><code>${f.code}</code><span class="factor-type ${t.cls}">${t.label}</span>${f.text}</li>`;
+      }).join('');
+      return `<div class="factor-group"><span class="factor-group-label">${label}</span><ul class="factor-list">${lis}</ul></div>`;
+    }).join('');
+  }
+
+  function renderProgress(){
+    const pb = document.getElementById('progress-bar');
+    const enBienvenida = state.phase === 'welcome';
+    const enCierre = state.phase === 'end' || state.phase === 'contrafactual' || state.phase === 'reflexion';
+
+    const quarters = CHAPTERS.map((c,i) => {
+      let cls = '';
+      if (enBienvenida) {
+        cls = '';
+      } else if (i < state.step) {
+        cls = 'done';
+      } else if (i === state.step && !enCierre) {
+        cls = 'current';
+      }
+      const shortLabel = c.quarter.split('·')[0].trim();
+      return `<li class="${cls}"><span class="step-num">${i+1}</span><span class="step-label">${shortLabel}</span></li>`;
+    }).join('');
+
+    const reporteCls = enBienvenida ? '' : (state.phase === 'end' ? 'current' : 'done');
+    const contraCls = enBienvenida ? '' : (state.phase === 'contrafactual' ? 'current' : (state.phase === 'reflexion' ? 'done' : ''));
+    const reflCls = enBienvenida ? '' : (state.phase === 'reflexion' ? 'current' : '');
+
+    const extras = `
+      <li class="${reporteCls}"><span class="step-num">✓</span><span class="step-label">Reporte</span></li>
+      <li class="${contraCls}"><span class="step-num">⌥</span><span class="step-label">Contrafactual</span></li>
+      <li class="${reflCls}"><span class="step-num">✎</span><span class="step-label">Reflexión</span></li>
+    `;
+
+    pb.innerHTML = quarters + extras;
+  }
+
+  function renderLog(){
+    const lc = document.getElementById('log-container');
+    lc.innerHTML = state.history.map(h => {
+      const ch = CHAPTERS[h.step];
+      const opt = ch.options.find(o => o.key === h.optKey);
+      return `<li class="log-entry"><strong>${ch.quarter.split('·')[0].trim()} · ${ch.short}:</strong> ${opt.title}</li>`;
+    }).reverse().join('');
+  }
+
+  window.makeChoice = (key) => {
+    const opt = CHAPTERS[state.step].options.find(o => o.key === key);
+    state.history.push({ step: state.step, optKey: key });
+
+    state.kpis.margen += opt.margenDelta || 0;
+    state.kpis.caja += opt.cajaDelta || 0;
+    state.kpis.concentracion += opt.concentracionDelta || 0;
+
+    if (opt.opexMonthly) {
+      const trimestresRestantes = TOTAL_QUARTERS - state.step;
+      state.opexItems.push({
+        label: opt.title + ' (mensual)',
+        amount: opt.opexMonthly,
+        months: trimestresRestantes * 3,
+        type: 'recurring'
+      });
+      state.kpis.caja -= opt.opexMonthly * 3 * trimestresRestantes;
+    }
+
+    if (opt.ingresoMensual) {
+      const trimestresRestantes = TOTAL_QUARTERS - state.step;
+      state.kpis.caja += opt.ingresoMensual * 3 * trimestresRestantes;
+    }
+
+    if (opt.costoUnico) {
+      state.opexItems.push({
+        label: opt.costoUnico.label,
+        amount: opt.costoUnico.monto,
+        type: 'oneTime'
+      });
+      state.kpis.caja -= opt.costoUnico.monto;
+    }
+
+    state.lastBatch++;
+    opt.items.forEach(i => addFactor(i.q, i.w, i.t, i.text, state.lastBatch));
+
+    state.phase = "result";
+    renderAll();
+  };
+
+  window.advance = () => {
+    state.step++;
+    if (state.step >= CHAPTERS.length) {
+      if (state.kpis.caja < 0) state.quiebra = true;
+      state.cajaPorTrimestre.push(state.kpis.caja);
+      state.phase = "end";
+      saveRun();
+    } else {
+      state.phase = "choosing";
+      if (state.step === 3 && state.kpis.caja < 0 && !state.crisisTriggered) {
+        state.crisisTriggered = true;
+        state.quiebra = true;
+      }
+      state.cajaPorTrimestre.push(state.kpis.caja);
+    }
+    renderAll();
+  };
+
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    window.reiniciarAnio();
+  });
+
+  document.getElementById('btn-history').addEventListener('click', () => {
+    state.historyOpen = !state.historyOpen;
+    renderHistory();
+  });
+
+  loadReflectionFromStorage();
+  BASE_FACTORS.forEach(f => addFactor(f.q, f.w, f.t, f.text, 0));
+  renderAll();
+})();
+</script>
+</body>
+</html>
